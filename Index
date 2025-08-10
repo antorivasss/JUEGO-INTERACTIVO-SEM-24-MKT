@@ -267,6 +267,9 @@
             e.stopPropagation();
             const clickedTarget = e.currentTarget.dataset.target;
             const currentTask = tasks[currentTaskIndex];
+            
+            if (currentStepIndex >= currentTask.steps.length) return;
+
             const currentStep = currentTask.steps[currentStepIndex];
 
             if (clickedTarget === currentStep.target) {
