@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Interactivo de WooCommerce</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #wp-admin-menu a:hover, #wp-admin-menu .submenu a:hover {
+            background-color: #0073aa;
+            color: #fff;
+        }
+        .feedback {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .submenu {
+            display: none;
+            padding-left: 20px;
+        }
+        .menu-item.open .submenu {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="flex flex-col h-screen">
+        <!-- Barra de Tarea -->
+        <div id="task-bar" class="bg-indigo-600 text-white p-4 text-center shadow-md z-10">
+            <h2 class="text-lg font-semibold">Tarea <span id="task-counter">1/5</span>: <span id="task-text"></span></h2>
+        </div>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar de WordPress/WooCommerce -->
+            <aside class="w-64 bg-gray-800 text-gray-300 flex flex-col p-4 space-y-1">
+                <h1 class="text-white font-bold text-2xl mb-4 text-center">Mi Tienda</h1>
+                <nav id="wp-admin-menu">
+                    <div class="menu-item">
+                        <a href="#" data-target="escritorio" class="block py-2.5 px-4 rounded transition duration-200">Escritorio</a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" data-target="productos" class="block py-2.5 px-4 rounded transition duration-200 font-bold">Productos</a>
+                        <div class="submenu">
+                             <a href="#" data-target="productos-todos" class="block py-2 px-4 rounded text-sm">Todos los productos</a>
+                             <a href="#" data-target="productos-nuevo" class="block py-2 px-4 rounded text-sm">Añadir nuevo</a>
+                        </div>
+                    </div>
+                     <div class="menu-item">
+                        <a href="#" data-target="pedidos" class="block py-2.5 px-4 rounded transition duration-200">Pedidos</a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" data-target="clientes" class="block py-2.5 px-4 rounded transition duration-200">Clientes</a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" data-target="marketing" class="block py-2.5 px-4 rounded transition duration-200">Marketing</a>
+                        <div class="submenu">
+                             <a href="#" data-target="marketing-cupones" class="block py-2 px-4 rounded text-sm">Cupones</a>
+                        </div>
+                    </div>
+                    <div class="menu-item">
+                        <a href="#" data-target="plugins" class="block py-2.5 px-4 rounded transition duration-200">Plugins</a>
+                        <div class="submenu">
+                            <a href="#" data-target="plugins-instalados" class="block py-2 px-4 rounded text-sm">Plugins instalados</a>
+                            <a href="#" data-target="plugins-nuevo" class="block py-2 px-4 rounded text-sm">Añadir nuevo</a>
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Área de Contenido Principal -->
+            <main class="flex-1 p-6 md:p-10 overflow-y-auto bg-gray-200">
+                <div id="main-content">
+                    <!-- Contenido se cargará dinámicamente aquí -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Contenedor de Feedback -->
+    <div id="feedback-container" class="feedback fixed top-24 right-5 opacity-0 pointer-events-none transition-opacity duration-500">
+        <div id="feedback-message" class="p-4 rounded-lg shadow-lg text-white font-semibold"></div>
+    </div>
+    
+    <!-- Modal de Éxito -->
+    <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-20">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-auto transform transition-all scale-95">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
+                <svg class="h-10 w-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mt-4">¡Excelente!</h3>
+            <p id="modal-text" class="text-gray-600 mt-2"></p>
+            <button id="next-task-btn" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition-colors">
+                Siguiente Tarea
+            </button>
+             <button id="restart-btn" class="mt-2 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">
+                Reiniciar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Contenido de las Vistas ---
+        const views = {
+            escritorio: `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Escritorio</h2>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <p class="text-gray-700">Bienvenido al panel de control de tu tienda. Sigue las instrucciones de la barra superior para completar la tarea.</p>
+                    </div>
+                </div>`,
+            productos: `
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-3xl font-bold text-gray-800">Productos</h2>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <p class="text-gray-700">Aquí verías la lista de todos tus productos.</p>
+                        <a href="#" data-target="edit-product-link" class="interactive-element text-blue-600 hover:underline mt-4 block">Mochila de Viaje</a>
+                    </div>
+                </div>`,
+            nuevoProducto: `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Añadir nuevo producto</h2>
+                    <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                        <div>
+                            <label for="product-name" class="block text-sm font-medium text-gray-700">Nombre del producto</label>
+                            <input type="text" id="product-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="product-price" class="block text-sm font-medium text-gray-700">Precio normal ($)</label>
+                            <input type="text" id="product-price" class="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        </div>
+                        <div class="text-right">
+                           <button data-target="publish-product-btn" class="interactive-element bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition-colors">Publicar</button>
+                        </div>
+                    </div>
+                </div>`,
+            clientes: `
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-3xl font-bold text-gray-800">Clientes</h2>
+                        <button data-target="add-new-client-btn" class="interactive-element bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition-colors">Añadir nuevo cliente</button>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow"><p class="text-gray-700">Lista de clientes de tu tienda.</p></div>
+                </div>`,
+            plugins: `
+                 <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Plugins</h2>
+                    <div class="bg-white p-6 rounded-lg shadow"><p class="text-gray-700">Lista de plugins instalados.</p></div>
+                </div>`,
+             nuevoPlugin: `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Añadir plugins</h2>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <input type="text" class="block w-full md:w-1/2 rounded-md border-gray-300 shadow-sm" placeholder="Buscar plugins...">
+                        <div class="mt-6 border-t pt-6">
+                            <p class="font-semibold">Plugin Destacado: "Pagos con Tarjeta PRO"</p>
+                            <button data-target="install-plugin-btn" class="interactive-element mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-3 rounded-lg text-sm">Instalar ahora</button>
+                        </div>
+                    </div>
+                </div>`,
+            cupones: `
+                 <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Cupones</h2>
+                    <div class="bg-white p-6 rounded-lg shadow text-center">
+                        <p class="text-gray-700 mb-4">Aún no has creado ningún cupón.</p>
+                        <button data-target="add-new-coupon-btn" class="interactive-element bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition-colors">Crear tu primer cupón</button>
+                    </div>
+                </div>`,
+            nuevoCupon: `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Añadir nuevo cupón</h2>
+                    <div class="bg-white p-6 rounded-lg shadow space-y-4">
+                        <div>
+                            <label for="coupon-code" class="block text-sm font-medium text-gray-700">Código de cupón</label>
+                            <input type="text" id="coupon-code" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </div>
+                        <div>
+                            <label for="coupon-amount" class="block text-sm font-medium text-gray-700">Importe del cupón</label>
+                            <input type="text" id="coupon-amount" class="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm">
+                        </div>
+                        <div class="text-right">
+                           <button data-target="publish-coupon-btn" class="interactive-element bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition-colors">Publicar</button>
+                        </div>
+                    </div>
+                </div>`,
+            editProduct: `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Editar producto</h2>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-semibold mb-4">Datos del producto</h3>
+                        <label for="product-price" class="block text-sm font-medium text-gray-700">Precio normal ($)</label>
+                        <input type="text" id="product-price" class="mt-1 block w-full md:w-1/2 rounded-md border-gray-300 shadow-sm" value="1200.00">
+                        <div class="text-right mt-4">
+                            <button data-target="update-product-btn" class="interactive-element bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition-colors">Actualizar</button>
+                        </div>
+                    </div>
+                </div>`
+        };
+
+        // --- Lógica del Juego ---
+        const tasks = [
+            {
+                description: 'Ve a "Productos > Añadir nuevo", ponle un nombre y precio, y haz clic en "Publicar".',
+                steps: [ { target: 'productos-nuevo', view: 'nuevoProducto', feedback: '¡Correcto! Ahora llena los datos.' }, { target: 'publish-product-btn', view: 'productos', feedback: '¡Producto añadido!' } ]
+            },
+            {
+                description: 'Ve a "Clientes" y haz clic en el botón para "Añadir nuevo cliente".',
+                steps: [ { target: 'clientes', view: 'clientes', feedback: '¡Bien! Has ido a la sección de clientes.' }, { target: 'add-new-client-btn', view: 'clientes', feedback: '¡Perfecto! Tarea completada.' } ]
+            },
+            {
+                description: 'Ve a "Plugins > Añadir nuevo" y haz clic en "Instalar ahora" en el plugin destacado.',
+                steps: [ { target: 'plugins-nuevo', view: 'nuevoPlugin', feedback: '¡Exacto! Ahora instala el plugin.' }, { target: 'install-plugin-btn', view: 'plugins', feedback: '¡Plugin instalado!' } ]
+            },
+            {
+                description: 'Ve a "Marketing > Cupones", crea un cupón con un código y un importe, y publícalo.',
+                steps: [ { target: 'marketing-cupones', view: 'cupones', feedback: '¡Muy bien! Ahora crea tu primer cupón.' }, { target: 'add-new-coupon-btn', view: 'nuevoCupon', feedback: '¡Genial! Llena los datos y publica.' }, { target: 'publish-coupon-btn', view: 'cupones', feedback: '¡Cupón creado!' } ]
+            },
+            {
+                description: 'Ve a "Productos > Todos los productos", haz clic en "Mochila de Viaje", cambia su precio y haz clic en "Actualizar".',
+                steps: [ { target: 'productos-todos', view: 'productos', feedback: '¡Correcto! Ahora selecciona el producto.' }, { target: 'edit-product-link', view: 'editProduct', feedback: '¡Bien! Ahora cambia el precio y actualiza.' }, { target: 'update-product-btn', view: 'productos', feedback: '¡Precio actualizado!' } ]
+            }
+        ];
+
+        let currentTaskIndex = 0;
+        let currentStepIndex = 0;
+
+        const mainContent = document.getElementById('main-content');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const successModal = document.getElementById('success-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalText = document.getElementById('modal-text');
+        const nextTaskBtn = document.getElementById('next-task-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const taskText = document.getElementById('task-text');
+        const taskCounter = document.getElementById('task-counter');
+        const menuItems = document.querySelectorAll('.menu-item');
+
+        function showFeedback(message, isCorrect) {
+            feedbackMessage.textContent = message;
+            feedbackMessage.className = `p-4 rounded-lg shadow-lg text-white font-semibold ${isCorrect ? 'bg-green-500' : 'bg-red-500'}`;
+            feedbackContainer.classList.remove('opacity-0');
+            setTimeout(() => {
+                feedbackContainer.classList.add('opacity-0');
+            }, 2500);
+        }
+        
+        function loadView(viewName) {
+            mainContent.innerHTML = views[viewName];
+            addEventListenersToInteractiveElements();
+        }
+        
+        function updateTaskUI() {
+            taskText.textContent = tasks[currentTaskIndex].description;
+            taskCounter.textContent = `${currentTaskIndex + 1}/${tasks.length}`;
+        }
+
+        function handleInteraction(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const clickedTarget = e.currentTarget.dataset.target;
+            const currentTask = tasks[currentTaskIndex];
+            const currentStep = currentTask.steps[currentStepIndex];
+
+            if (clickedTarget === currentStep.target) {
+                showFeedback(currentStep.feedback, true);
+                loadView(currentStep.view);
+                
+                const mainTarget = clickedTarget.split('-')[0];
+                 menuItems.forEach(item => {
+                    const link = item.querySelector('a');
+                    if (link && link.dataset.target === mainTarget) {
+                        item.classList.add('open');
+                        link.classList.add('bg-blue-500', 'text-white');
+                    } else if (link) {
+                         link.classList.remove('bg-blue-500', 'text-white');
+                    }
+                 });
+
+                currentStepIndex++;
+                if (currentStepIndex >= currentTask.steps.length) {
+                    setTimeout(() => {
+                        modalTitle.textContent = `¡Tarea ${currentTaskIndex + 1} Completada!`;
+                        modalText.textContent = currentTask.description;
+                        if (currentTaskIndex === tasks.length - 1) {
+                            nextTaskBtn.textContent = '¡Felicidades! Has terminado.';
+                            nextTaskBtn.disabled = true;
+                        } else {
+                            nextTaskBtn.textContent = 'Siguiente Tarea';
+                            nextTaskBtn.disabled = false;
+                        }
+                        successModal.style.display = 'flex';
+                        setTimeout(() => successModal.querySelector('div').classList.remove('scale-95'), 10);
+                    }, 500);
+                }
+            } else {
+                showFeedback('Intenta de nuevo. Revisa la tarea en la barra superior.', false);
+            }
+        }
+
+        function addEventListenersToInteractiveElements() {
+            const elements = document.querySelectorAll('.interactive-element');
+            elements.forEach(el => {
+                el.addEventListener('click', handleInteraction);
+            });
+        }
+        
+        function loadNextTask() {
+            successModal.style.display = 'none';
+            successModal.querySelector('div').classList.add('scale-95');
+            
+            if (currentTaskIndex < tasks.length - 1) {
+                currentTaskIndex++;
+                currentStepIndex = 0;
+                updateTaskUI();
+                loadView('escritorio');
+                 menuItems.forEach(item => {
+                    item.classList.remove('open');
+                    const link = item.querySelector('a');
+                    if (link) link.classList.remove('bg-blue-500', 'text-white');
+                });
+            }
+        }
+
+        function restartGame() {
+            currentTaskIndex = 0;
+            currentStepIndex = 0;
+            updateTaskUI();
+            loadView('escritorio');
+            successModal.style.display = 'none';
+            successModal.querySelector('div').classList.add('scale-95');
+            menuItems.forEach(item => {
+                item.classList.remove('open');
+                const link = item.querySelector('a');
+                if (link) link.classList.remove('bg-blue-500', 'text-white');
+            });
+        }
+        
+        function setupMenu() {
+            menuItems.forEach(item => {
+                const link = item.querySelector('a');
+                const submenu = item.querySelector('.submenu');
+
+                if (submenu) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        item.classList.toggle('open');
+                    });
+                    const submenuLinks = submenu.querySelectorAll('a');
+                    submenuLinks.forEach(sublink => {
+                        sublink.addEventListener('click', handleInteraction);
+                    });
+                } else if (link) {
+                    link.addEventListener('click', handleInteraction);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateTaskUI();
+            loadView('escritorio');
+            setupMenu();
+            nextTaskBtn.addEventListener('click', loadNextTask);
+            restartBtn.addEventListener('click', restartGame);
+        });
+
+    </script>
+</body>
+</html>
